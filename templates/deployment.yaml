@@ -8,7 +8,7 @@ spec:
   replicas: {{ .Values.deployment.replicas | default 1 }}
   selector:
     matchLabels:
-      app: {{ .Values.name }}
+      app: {{ .Values.name }} 
   template:
     metadata:
       labels:
