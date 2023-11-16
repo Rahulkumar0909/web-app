@@ -11,7 +11,7 @@ spec:
       app: {{ .Values.name }}
   template:
     metadata:
-      labels:
+      labels: 
         app: {{ .Values.name }}
     spec:
       containers:
