@@ -1,0 +1,45 @@
+name: my workflow
+
+on:
+  push:
+    branches:
+      - master
+      - dev
+    paths:
+      - 'templates/**'
+  pull_request:
+    branches:
+      - master
+      - dev
+    paths:
+      - 'templates/**'
+  workflow_dispatch:
+ 
+env:
+  DEV_GITHUB_ECR_ARN: arn:aws:iam::083600104344:role/GithubActionsFullAccessforECR
+  PROD_GITHUB_ECR_ARN: arn:aws:iam::094039530644:role/GithubActionsFullAccessforECR
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set env GITHUB_ECR_ARN
+        run: exit 0
+        
+  deploy_prod:
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/master'
+    steps:
+      - name: Deploy app
+        run: echo "deployed to master ${{env.PROD_GITHUB_ECR_ARN}}"
+
+  deploy_dev:
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/dev'
+    steps:
+      - name: Deploy app
+        run: echo "deployed to dev ${{env.DEV_GITHUB_ECR_ARN}}"
