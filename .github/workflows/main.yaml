@@ -44,3 +44,178 @@ jobs:
       - name: Deploy app
         if: github.ref == 'refs/heads/dev'
         run: echo "deployed to dev ${{env.DEV_GITHUB_ECR_ARN}}"
+
+
+
+# name: Deploy admin-service image to ECR
+
+# on:
+#   push:
+#     branches:
+#       - master
+#       - dev
+#     paths:
+#       - 'admin-service/**'
+#   pull_request:
+#     branches:
+#       - master
+#       - dev
+#     paths:
+#       - 'admin-service/**'
+#   workflow_dispatch:
+ 
+# env:
+#   SERVICE: admin-service
+#   ECR_REPOSITORY: admin-service
+#   AWS_DEFAULT_REGION: us-east-1
+#   DEV_GITHUB_ECR_ARN: arn:aws:iam::083600104344:role/GithubActionsFullAccessforECR
+#   PROD_GITHUB_ECR_ARN: arn:aws:iam::094039530644:role/GithubActionsFullAccessforECR
+
+# permissions:
+#  id-token: write
+#  contents: read # This is required for actions/checkout@v2
+
+# jobs:
+#   build:
+#     name: Build
+#     runs-on: ubuntu-latest
+
+#     steps:
+#       # Run step only for master branch.
+#       - name: Configure AWS Credentials for Production
+#         uses: aws-actions/configure-aws-credentials@v1
+#         if: github.ref == 'refs/heads/master'
+#         with:
+#           role-to-assume: ${{env.PROD_GITHUB_ECR_ARN}}
+#           role-session-name: ecr-session
+#           aws-region: ${{env.AWS_DEFAULT_REGION}}
+
+#       # Run step only for dev branch.
+#       - name: Configure AWS Credentials for Development
+#         uses: aws-actions/configure-aws-credentials@v1
+#         if: github.ref == 'refs/heads/dev'
+#         with:
+#           role-to-assume: ${{env.DEV_GITHUB_ECR_ARN}}
+#           role-session-name: ecr-session
+#           aws-region: ${{env.AWS_DEFAULT_REGION}}
+
+#       - name: Check out code
+#         uses: actions/checkout@v2
+#         with:
+#           fetch-dept: 0
+
+#       - name: Login to Amazon ECR
+#         id: login-ecr
+#         uses: aws-actions/amazon-ecr-login@v1
+
+#       - name: Use semantic versioning bash script
+#         id: version
+#         run: |
+#           chmod +x ./version.sh
+#           echo "::set-output name=tag::$(./version.sh $ECR_REPOSITORY)"
+#         shell: bash
+
+#       - name: Image tag output
+#         run: |
+#           echo IAMGE_TAG: ${{ steps.version.outputs.tag }}
+
+#       - name: Docker Build & tag
+#         env:
+#           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+#         run: |
+#           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:${{ steps.version.outputs.tag }} ./$SERVICE/
+
+#       - name: Push image to Amazon ECR
+#         env:
+#           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+#         run: |
+#           docker push $ECR_REGISTRY/$ECR_REPOSITORY:${{ steps.version.outputs.tag }}
+
+#     outputs:
+#       build-tag: ${{ steps.version.outputs.tag }}
+
+#   deploy:
+#     name: Deploy
+#     runs-on: ubuntu-latest
+#     if: ${{ always() && contains(join(needs.*.result, ','), 'success') }}
+#     needs: [build]
+
+#     steps:
+#       # Run step only for master branch.
+#       - name: Configure AWS Credentials for Production
+#         uses: aws-actions/configure-aws-credentials@v1
+#         if: github.ref == 'refs/heads/master'
+#         with:
+#           role-to-assume: ${{env.PROD_GITHUB_ECR_ARN}}
+#           role-session-name: ecr-session
+#           aws-region: ${{env.AWS_DEFAULT_REGION}}
+
+#       # Run step only for dev branch.
+#       - name: Configure AWS Credentials for Development
+#         uses: aws-actions/configure-aws-credentials@v1
+#         if: github.ref == 'refs/heads/dev'
+#         with:
+#           role-to-assume: ${{env.DEV_GITHUB_ECR_ARN}}
+#           role-session-name: ecr-session
+#           aws-region: ${{env.AWS_DEFAULT_REGION}}
+
+#       - name: Check out code
+#         uses: actions/checkout@v2
+#         with:
+#           fetch-dept: 0
+
+#       - name: Login to Amazon ECR
+#         id: login-ecr
+#         uses: aws-actions/amazon-ecr-login@v1
+
+#       - name: Update Development Image deploying to AWS geogram-dev
+#         if: github.ref == 'refs/heads/dev'
+#         run: |
+#           GH_USER=${{ secrets.GH_USER }}
+#           CLONE_TOKEN=${{ secrets.CLONE_TOKEN }}
+          
+#           git config --global url."https://${GH_USER}:${CLONE_TOKEN}@github.com/".insteadOf "https://github.com/"
+#           git config --global user.email ${{ secrets.GH_EMAIL }}
+#           git config --global user.name ${{ secrets.GH_USER }}
+
+#           git clone https://github.com/GeogramCorporation/geogram-k8s-manifest.git 
+#           cd geogram-k8s-manifest
+
+#           # Get latest image tag from aws  
+#           ECR_TAG=${{needs.build.outputs.build-tag}}
+#           echo "$ECR_TAG"
+
+#           # Update image name in kustomization.yaml 
+#           echo $ECR_REPOSITORY
+#           sed -i "10s/.*/  newTag: $ECR_TAG/" ./microservices/$ECR_REPOSITORY/overlays/Development/kustomization.yaml
+
+#           git add ./microservices/$ECR_REPOSITORY/overlays/Development/
+#           git commit -m "Deploy $ECR_REPOSITORY image with $ECR_TAG tag in AWS geogram-dev"
+#           git pull --rebase
+#           git push --force origin master
+
+#       - name: Update Production Image deploying to AWS geogram-dev
+#         if: github.ref == 'refs/heads/master'
+#         run: |
+#           GH_USER=${{ secrets.GH_USER }}
+#           CLONE_TOKEN=${{ secrets.CLONE_TOKEN }}
+          
+#           git config --global url."https://${GH_USER}:${CLONE_TOKEN}@github.com/".insteadOf "https://github.com/"
+#           git config --global user.email ${{ secrets.GH_EMAIL }}
+#           git config --global user.name ${{ secrets.GH_USER }}
+
+#           git clone https://github.com/GeogramCorporation/geogram-k8s-manifest.git 
+#           cd geogram-k8s-manifest
+
+#           # Get latest image tag from aws  
+#           ECR_TAG=${{needs.build.outputs.build-tag}}
+#           echo "$ECR_TAG"
+
+#           # Update image name in kustomization.yaml 
+#           echo $ECR_REPOSITORY
+#           sed -i "10s/.*/  newTag: $ECR_TAG/" ./microservices/$ECR_REPOSITORY/overlays/prod/kustomization.yaml
+
+#           git add ./microservices/$ECR_REPOSITORY/overlays/prod/
+#           git commit -m "Deploy $ECR_REPOSITORY image with $ECR_TAG tag in AWS geogram-prod"
+#           git pull --rebase
+#           git push --force origin master
